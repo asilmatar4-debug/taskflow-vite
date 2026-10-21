@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function projectPath(pid) { return /databases/$(database)/documents/projects/$(pid); }
+    function member(pid) {
+      return signedIn() && exists(projectPath(pid))
+        && request.auth.uid in get(projectPath(pid)).data.memberIds;
+    }
+    function owner(pid) {
+      return signedIn() && exists(projectPath(pid))
+        && get(projectPath(pid)).data.ownerId == request.auth.uid;
+    }
+    function validProject(d) {
+      return d.keys().hasAll(['name','description','ownerId','memberIds','memberNames','createdAt','updatedAt'])
+        && d.keys().hasOnly(['name','description','ownerId','memberIds','memberNames','createdAt','updatedAt'])
+        && d.name is string && d.name.size() >= 3 && d.name.size() <= 80
+        && d.description is string && d.description.size() <= 1000
+        && d.ownerId is string && d.memberIds is list && d.memberNames is map
+        && d.memberIds.size() >= 1 && d.memberIds.size() <= 20
+        && d.memberIds.toSet().size() == d.memberIds.size()
+        && d.ownerId in d.memberIds
+        && d.memberNames.keys().hasAll(d.memberIds)
+        && d.memberNames.keys().size() == d.memberIds.size()
+        && d.createdAt is timestamp && d.updatedAt is timestamp;
+    }
+    function validTask(d) {
+      return d.keys().hasAll(['title','description','status','priority','assigneeId','createdBy','dueDate','createdAt','updatedAt'])
+        && d.keys().hasOnly(['title','description','status','priority','assigneeId','createdBy','dueDate','createdAt','updatedAt'])
+        && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
+        && d.description is string && d.description.size() <= 1000
+        && d.status in ['todo','in_progress','done']
+        && d.priority in ['low','medium','high']
+        && d.createdBy is string && (d.dueDate == null || d.dueDate is timestamp)
+        && d.createdAt is timestamp && d.updatedAt is timestamp;
+    }
+    function assigneeValid(pid,d) {
+      return d.assigneeId == null || (d.assigneeId is string && d.assigneeId in get(projectPath(pid)).data.memberIds);
+    }
+    function validMembershipChange(oldData, newData) {
+      let added = newData.memberIds.removeAll(oldData.memberIds);
+      let removed = oldData.memberIds.removeAll(newData.memberIds);
+      return (added.size() == 0 && removed.size() == 0)
+        || (added.size() == 1 && removed.size() == 0
+          && newData.memberIds.size() == oldData.memberIds.size() + 1
+          && exists(/databases/$(database)/documents/users/$(added[0])))
+        || (added.size() == 0 && removed.size() == 1
+          && newData.memberIds.size() == oldData.memberIds.size() - 1
+          && removed[0] != oldData.ownerId);
+    }
+    match /users/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName','email','createdAt'])
+        && request.resource.data.keys().hasAll(['displayName','email','createdAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, update, delete: if false;
+    }
+    match /userLookup/{emailKey} {
+      allow get: if signedIn();
+      allow list, update, delete: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['uid','displayName','email','createdAt'])
+        && request.resource.data.keys().hasOnly(['uid','displayName','email','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && emailKey == request.auth.token.email
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.createdAt == request.time;
+    }
+    match /projects/{pid} {
+      allow get, list: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow create: if signedIn() && validProject(request.resource.data)
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.memberNames[request.auth.uid] is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid
+        && validProject(request.resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validMembershipChange(resource.data,request.resource.data)
+        && request.resource.data.memberNames[request.auth.uid] == resource.data.memberNames[request.auth.uid]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','description','memberIds','memberNames','updatedAt']);
+      // Deliberately restricted until server-side recursive cleanup is configured.
+      allow delete: if false;
+      match /tasks/{tid} {
+        allow get, list: if member(pid);
+        allow create: if member(pid) && validTask(request.resource.data)
+          && assigneeValid(pid,request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if member(pid) && validTask(request.resource.data)
+          && assigneeValid(pid,request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && (
+            owner(pid)
+            || (resource.data.createdBy == request.auth.uid
+                && request.resource.data.status == resource.data.status)
+            || (resource.data.assigneeId == request.auth.uid
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']))
+          );
+        allow delete: if member(pid) && (owner(pid) || resource.data.createdBy == request.auth.uid);
+      }
+    }
+  }
+}

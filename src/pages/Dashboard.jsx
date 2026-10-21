@@ -1,0 +1,14 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FolderKanban, ListTodo, Clock3, CheckCircle2, Plus, ArrowUpRight, CalendarClock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { listProjects } from '../services/projectService';
+import { listTasks, isOverdue } from '../services/taskService';
+import PageHeader from '../components/PageHeader';
+import { message } from '../utils/errors';
+export default function Dashboard(){
+  const{user}=useAuth();const[data,setData]=useState({projects:[],tasks:[]});const[loading,setLoading]=useState(true);const[error,setError]=useState('');
+  useEffect(()=>{let active=true;async function load(){try{const projects=await listProjects(user.uid);const results=await Promise.all(projects.map(p=>listTasks(p.id)));if(active)setData({projects,tasks:results.flat()});}catch(err){if(active)setError(message(err));}finally{if(active)setLoading(false);}}load();return()=>{active=false;};},[user.uid]);
+  const{projects,tasks}=data;const due=tasks.filter(isOverdue);const cards=[['Projects',projects.length,FolderKanban],['Total tasks',tasks.length,ListTodo],['In progress',tasks.filter(t=>t.status==='in_progress').length,Clock3],['Completed',tasks.filter(t=>t.status==='done').length,CheckCircle2],['Overdue',due.length,CalendarClock]];
+  return <div className="page"><PageHeader eyebrow="GOOD TO SEE YOU" title={`Welcome back, ${(user.displayName||'there').split(' ')[0]}`} subtitle="Here’s what’s happening across your workspace."><Link className="btn btn-primary" to="/projects/new"><Plus size={18}/>New project</Link></PageHeader>{loading?<div className="panel pad">Loading workspace…</div>:error?<p className="error-box">{error}</p>:<><div className="stat-grid">{cards.map(([label,value,Icon])=><div className="panel stat" key={label}><span className="stat-icon"><Icon size={21}/></span><span>{label}</span><strong>{value}</strong></div>)}</div><section className="panel pad"><div className="section-head"><div><h2>Recent projects</h2><p>Jump back into your work.</p></div><Link to="/projects" className="text-link">View all <ArrowUpRight size={16}/></Link></div>{!projects.length?<div className="empty"><FolderKanban size={34}/><h3>Make your first project</h3><p>Start with a name, then add tasks and teammates.</p></div>:<div className="mini-projects">{projects.slice(0,5).map(p=><Link to={`/projects/${p.id}`} key={p.id}><span className="project-icon mini"><FolderKanban size={19}/></span><span><strong>{p.name}</strong><small>{p.memberIds.length} team member(s)</small></span><ArrowUpRight size={18}/></Link>)}</div>}</section>{due.length>0&&<section className="panel pad"><h2>Overdue tasks</h2><p className="muted">Tasks due before today that are not complete.</p><div className="mini-projects">{due.slice(0,5).map(t=><div key={t.id} className="plain-line">{t.title}</div>)}</div></section>}</>}</div>;
+}
