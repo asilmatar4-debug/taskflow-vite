@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+secrets/
+*serviceAccount*.json
+*.log
+backend/secrets/
+backend/.env
+.env.local
+node_modules/
+dist/
+backend/node_modules/
