@@ -1,72 +1,289 @@
-# TaskFlow — Project & Task Management
+# TaskFlow – Full Stack Project Management Application
 
-A React + Vite + Firebase assessment project. Built with straightforward components, React hooks, React Router and Cloud Firestore. The UI is responsive and uses plain CSS.
+TaskFlow is a full-stack web application designed to help individuals and teams organize projects, manage tasks, collaborate with team members, and track work progress through a modern, responsive interface.
 
-## Setup
+The application uses React and Vite for the frontend, Node.js and Express.js for the backend, and Firebase for authentication and data storage.
 
-1. Install Node.js 20+.
-2. Run `npm install`.
-3. Copy `.env.example` to `.env.local` and enter the **Firebase Web SDK configuration** (Vite uses `VITE_` prefixes, not `NEXT_PUBLIC_`). **Never add Firebase Admin service-account keys.**
-4. Firebase Console: enable Authentication → Email/Password, create Cloud Firestore, and publish the contents of `firestore.rules` using the Firestore Rules editor.
-5. Run `npm run dev` and open the local URL Vite prints.
-6. Run `npm run lint` and `npm run build` before deployment.
+## Live Links
 
-## Architecture
+- **Live Application:** https://taskflow-vite-seven.vercel.app
+- **GitHub Repository:** https://github.com/asilmatar4-debug/taskflow-vite
+- **Backend API Health Check:** https://taskflow-api-cdfv.onrender.com/api/health
 
-- `src/pages`: routed screens and simple page-specific state.
-- `src/components`: layout and reusable task forms/cards/filters.
-- `src/services`: Firebase CRUD operations; forms don't call Firestore directly.
-- `src/context`: shared Firebase Auth state.
-- `src/firebase.js`: one Firebase client initialization.
-- `firestore.rules`: server-enforced permissions; never rely on hidden buttons alone.
+## Technologies Used
 
-## Features
+### Frontend
+- React.js
+- Vite
+- JavaScript
+- CSS
+- React Router
+- Lucide React Icons
 
-- Email/password authentication; profile records; protected routes; session persistence.
-- Projects: create, list, read and edit; owner/member access.
-- Invite-free membership: owner looks up existing registered users by their exact email, adds or removes them. Removing an assigned member unassigns their tasks in a batch.
-- Nested project tasks: create/edit/delete; assignment, status, priority, deadline and timestamps.
-- Search title; filter status including overdue, priority and assignee; dashboard totals and personal task list.
-- Loading, empty, denied and error states; desktop/mobile responsive design.
+### Backend
+- Node.js
+- Express.js
+- Firebase Admin SDK
+- REST API
+- Firebase ID Token Verification
 
-## Firestore collections
+### Database and Authentication
+- Firebase Cloud Firestore
+- Firebase Authentication
+- Email and Password Authentication
+- Google Authentication
 
-- `users/{uid}` → `displayName, email, createdAt`
-- `userLookup/{lowercaseEmail}` → `uid, displayName, email, createdAt` (exact-document lookup only; no collection listing)
-- `projects/{projectId}` → `name, description, ownerId, memberIds, memberNames, createdAt, updatedAt`
-- `projects/{projectId}/tasks/{taskId}` → `title, description, status, priority, assigneeId, createdBy, dueDate, createdAt, updatedAt`
+### Deployment
+- Vercel – Frontend Hosting
+- Render – Backend Hosting
+- Firebase – Authentication and Database
 
-## Limitations and important notes
+## Main Features
 
-- **Project deletion is deliberately restricted** at both service and security rules. Firestore subcollections are not automatically deleted. The assessment allows a documented deletion restriction for the 7-day MVP. A server-side recursive cleanup operation is needed before enabling project deletion.
-- For large projects, batched membership removal is capped at 400 task docs; this MVP does not implement pagination.
-- Older Next.js projects missing `memberNames` can be upgraded by their owner with **Upgrade old project** in Project Settings. Do this before editing the project or its membership. User profiles created by the previous Next.js version will receive a `userLookup` record when they sign in through the Vite app; creating a profile from the new Register page also writes it.
-- Date-only deadlines use local midday timestamps; overdue compares local calendar dates. Deploy and test in the evaluator's timezone.
-- If a Firestore write succeeds but the subsequent refresh fails, the UI shows a warning and a reload reveals persisted data.
-- No payments, uploads, email invitations, notifications or realtime chat (out of scope).
-- Responsive layout should be checked at 375px, 768px, 1280px.
-- Deployment should use Vercel or Firebase Hosting with SPA fallback to `index.html`. Add Vite env vars to the hosting provider, not just local `.env.local`.
-- **Important:** This replaces the Next.js app; don't copy these files over its `src/`. Create a fresh repository/branch and preserve the original project as backup.
+### 1. User Authentication
+- User registration and login using email and password
+- Sign in with Google
+- Protected application pages
+- User session management
+- Secure logout
 
-## Test plan (manual)
+### 2. Project Management
+- Create new projects
+- View existing projects
+- Edit project details
+- Delete projects and their associated tasks
+- Display project progress and task statistics
 
-1. Register owner and member accounts; verify Auth and user profile docs.
-2. Sign in, reload, sign out, and try protected URLs unauthenticated.
-3. Create and edit a project; reload and verify Firestore persistence.
-4. Add registered member by email; reject unknown/duplicate email.
-5. As member, open shared project, create task; as owner, assign task.
-6. Validate empty title, high-priority filtering, text search and overdue filter.
-7. Change task status and reload; test delete confirmations.
-8. Owner-only settings should be denied to member, even via URL.
-9. Sign in with a third account and try a foreign project URL; must deny.
-10. Use Firestore Rules Playground / Emulator to verify denied direct writes and cross-user reads.
-11. Remove member: their future project access must be revoked and assignments cleared.
-12. Test on mobile, network failure, slow loading and unassigned tasks.
+### 3. Team Collaboration
+- Add registered users to projects using their email addresses
+- Remove project members
+- Distinguish between project owners and members
+- Apply role-based permissions to project operations
 
-## Demo (5 minutes)
+### 4. Task Management
+- Create, view, edit, and delete tasks
+- Assign tasks to project members
+- Set task priorities and due dates
+- Update task statuses:
+  - To Do
+  - In Progress
+  - Done
+- Search and filter tasks
+- Identify overdue tasks
 
-Login → Dashboard stats → New Project → Add existing member → Create/assign task → Filters → Task progress → Show second account cannot edit project → GitHub / rules explanation.
+### 5. Dashboard
+- Total projects
+- Total tasks
+- Tasks in progress
+- Completed tasks
+- Overdue tasks
+- Overall completion percentage
+- Recent tasks and project progress
 
-## Hosting on Vercel
+### 6. Responsive Design
+- Responsive layouts for desktop and mobile devices
+- Modern dashboard interface
+- Clear project cards and progress indicators
+- Consistent navigation and visual design
 
-Import GitHub repo, set Framework Preset = Vite, build command `npm run build`, output directory `dist`, configure six `VITE_FIREBASE_*` variables; use SPA rewrite. `vercel.json` is included.
+## Project Structure
+
+```text
+TaskFlow-Vite/
+├── backend/
+│   ├── src/
+│   │   └── server.js
+│   ├── package.json
+│   └── .env.example
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   └── firebase.js
+├── public/
+├── firestore.rules
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+## How to Run the Project Locally
+
+### Prerequisites
+
+- Node.js and npm
+- A Firebase project with Authentication and Firestore enabled
+- Firebase Admin credentials for the backend
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/asilmatar4-debug/taskflow-vite.git
+cd taskflow-vite
+```
+
+### 2. Install Frontend Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Frontend Environment Variables
+
+Create a `.env.local` file in the root directory using the values from your Firebase project.
+
+```dotenv
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+VITE_API_URL=http://localhost:4000/api
+```
+
+### 4. Configure the Backend
+
+```bash
+cd backend
+npm install
+```
+
+Create a `.env` file in the `backend` directory:
+
+```dotenv
+PORT=4000
+FIREBASE_PROJECT_ID=your_project_id
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+Configure Firebase Admin credentials securely using the `GOOGLE_APPLICATION_CREDENTIALS` environment variable pointing to your private service account JSON file.
+
+**Never commit Firebase Admin credentials or private keys to GitHub.**
+
+### 5. Start the Backend
+
+From the `backend` directory:
+
+```bash
+npm run dev
+```
+
+The backend runs locally on port 4000.
+
+Health check:
+
+```text
+http://localhost:4000/api/health
+```
+
+### 6. Start the Frontend
+
+Open a separate terminal in the project's root directory:
+
+```bash
+npm run dev
+```
+
+Open the local application:
+
+```text
+http://localhost:5173
+```
+
+## Application Architecture
+
+TaskFlow follows a client-server architecture:
+
+1. **React + Vite** provides the user interface.
+2. **Firebase Authentication** handles registration and login.
+3. The frontend sends authenticated API requests to **Node.js + Express**.
+4. The backend verifies Firebase ID tokens and applies application permissions.
+5. **Firebase Admin SDK** communicates with Cloud Firestore.
+6. Firestore stores projects, tasks, and user-related information.
+
+## Security
+
+The application includes:
+
+- Firebase Authentication
+- Verification of Firebase ID tokens on backend requests
+- Owner and member permission checks
+- Protected frontend routes
+- Firestore security rules
+- Environment-based configuration
+- Private Firebase Admin credentials excluded from version control
+
+**Important:** Firebase Admin SDK has privileged access to Firestore. Therefore, server-side authorization checks are required independently of Firestore Security Rules.
+
+## Deployment
+
+### Frontend – Vercel
+
+The React application is deployed on Vercel.
+
+Production URL:
+
+https://taskflow-vite-seven.vercel.app
+
+The frontend uses `VITE_API_URL` to connect to the deployed backend.
+
+### Backend – Render
+
+The Express server is deployed as a Render Web Service.
+
+Backend health check:
+
+https://taskflow-api-cdfv.onrender.com/api/health
+
+The backend uses environment variables and a securely configured Firebase Admin service account.
+
+### Firebase
+
+Firebase provides:
+
+- User authentication
+- Google sign-in
+- Firestore database
+
+Authorized authentication domains include the deployed Vercel domain.
+
+## Testing
+
+The application has been manually tested for the following workflows:
+
+- User login and registration
+- Google authentication
+- Creating and updating projects
+- Creating and managing tasks
+- Adding and removing project members
+- Project deletion with associated task cleanup
+- Owner and member interface permissions
+- Loading dashboard statistics
+- Persisting data in Firestore
+- Frontend and backend deployment connectivity
+
+Additional API-level authorization and automated security tests are recommended before production use.
+
+## Screenshots
+
+Screenshots of the following pages can be found in the `screenshots` folder when included with the submission:
+
+- Login and Registration
+- Dashboard
+- Projects
+- Task Management
+- Team Members
+- Mobile Responsive View
+
+## Known Limitations
+
+- The free Render instance may take additional time to respond after inactivity.
+- Some production-scale features, such as automated test coverage and advanced monitoring, are outside the scope of the current project.
+- Server-side API authorization should be tested independently before deploying the application for sensitive or large-scale use.
+
+## Conclusion
+
+TaskFlow demonstrates the development and deployment of a full-stack project management application using React, Node.js, Express, and Firebase.
+
+It provides essential collaboration and task-tracking features through a responsive interface and a backend API, with separate deployments for frontend and backend services.
